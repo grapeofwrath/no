@@ -1,0 +1,3 @@
+building the system configuration...
+path '/home/marcus/dev/go/no' does not contain a 'flake.nix', searching up
+error: could not find a flake.nix file
