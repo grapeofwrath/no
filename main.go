@@ -14,7 +14,7 @@ var err error
 type Command struct {
 	Name string
 	Help string
-	Run  func(args []string) error
+	Run  func(args []string, dir string) error
 }
 
 var commands = []Command{
@@ -24,12 +24,12 @@ var commands = []Command{
 	{Name: "help", Help: "Print this help", Run: printHelpCmd},
 }
 
-func printHelpCmd(_ []string) error {
+func printHelpCmd(_ []string, _ string) error {
 	flag.Usage()
 	return nil
 }
 
-func garbageCmd(args []string) error {
+func garbageCmd(args []string, _ string) error {
 
 	flagSet := flag.NewFlagSet("garbage", flag.ExitOnError)
 	flagSet.Usage = func() {
@@ -69,8 +69,7 @@ Flags:
 	return nil
 }
 
-func rebuildCmd(args []string) error {
-	var dir string
+func rebuildCmd(args []string, dir string) error {
 	var activate = "switch"
 
 	hostName, err := os.Hostname()
@@ -82,9 +81,6 @@ func rebuildCmd(args []string) error {
 
 	flagSet.StringVar(&hostName, "config", hostName, "nixos configuration to use")
 	flagSet.StringVar(&hostName, "c", hostName, "nixos configuration to use")
-
-	flagSet.StringVar(&dir, "directory", ".", "run in this dir")
-	flagSet.StringVar(&dir, "d", ".", "run in this dir")
 
 	flagSet.Func("activate", "rebuild activation", func(flagValue string) error {
 		for _, allowedValue := range []string{"boot", "dry-activate", "switch"} {
@@ -122,7 +118,6 @@ Usage:
 Flags:
     -a, --activate   STRING  Set how the rebuild will be activated. (default 'switch')
     -c, --config     STRING  Specify which nixos configuration. (default 'hostname')
-    -d, --directory  STRING  Run in this directory, must be full path. (default '.')
     -h, --help               Print this help.`)
 		fmt.Fprintln(os.Stderr)
 	}
@@ -155,8 +150,7 @@ Flags:
 	return nil
 }
 
-func updateCmd(args []string) error {
-	var dir string
+func updateCmd(args []string, dir string) error {
 	var switchBool bool
 
 	hostName, err := os.Hostname()
@@ -165,9 +159,6 @@ func updateCmd(args []string) error {
 	}
 
 	flagSet := flag.NewFlagSet("rebuild", flag.ExitOnError)
-
-	flagSet.StringVar(&dir, "directory", ".", "run in this dir")
-	flagSet.StringVar(&dir, "d", ".", "run in this dir")
 
 	flagSet.BoolVar(&switchBool, "switch", false, "switch after update")
 	flagSet.BoolVar(&switchBool, "s", false, "switch after update")
@@ -179,15 +170,14 @@ Usage:
     no update [flags]
 
 Flags:
-    -d, --directory  STRING  Run in this directory, must be full path. (default '.')
-    -s, --switch     BOOL    Rebuild system config and activate on boot. (default 'false')
-    -h, --help               Print this help.`)
+    -s, --switch     BOOL  Rebuild system config and activate on boot. (default 'false')
+    -h, --help             Print this help.`)
 		fmt.Fprintln(os.Stderr)
 	}
 	flagSet.Parse(args)
 
 	err = os.Chdir(dir)
-	fmt.Printf("Updating flake in %s...", dir)
+	fmt.Printf("Updating flake in %s...\n", dir)
 
 	updateCmd := exec.Command("sudo", "nix", "flake", "update")
 
@@ -220,23 +210,28 @@ func usage() {
 	intro := `no is a NixOS and Home Manager CLI helper written in Go.
 
 Usage:
-  no [flags] <command> [command flags]`
+    no [flags] <command> [command flags]`
 	fmt.Fprintln(os.Stderr, intro)
 
 	fmt.Fprintln(os.Stderr, "\nCommands:")
 	for _, cmd := range commands {
-		fmt.Fprintf(os.Stderr, "  %-8s %s\n", cmd.Name, cmd.Help)
+		fmt.Fprintf(os.Stderr, "    %-8s %s\n", cmd.Name, cmd.Help)
 	}
 
-	fmt.Fprintln(os.Stderr, "\nFlags:")
-	flag.PrintDefaults()
+	fmt.Fprintln(os.Stderr, `
+Flags:
+    -d, --directory  PATH  Run in this directory, must be full path. (default '.')
+    -h, --help             Print this help.`)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Run `no <command> -h` to get help for a specific command")
 }
 
 func main() {
-	// flag.StringVar(&cwd, "dir", cwd, "Sets the directory for the command to run in")
+	var dir string
+
+	flag.StringVar(&dir, "directory", ".", "run in this dir")
+	flag.StringVar(&dir, "d", ".", "run in this dir")
 
 	flag.Usage = usage
 	flag.Parse()
@@ -249,10 +244,10 @@ func main() {
 	subCmd := flag.Arg(0)
 	subCmdArgs := flag.Args()[1:]
 
-	runCommand(subCmd, subCmdArgs)
+	runCommand(subCmd, subCmdArgs, dir)
 }
 
-func runCommand(name string, args []string) {
+func runCommand(name string, args []string, dir string) {
 	cmdIdx := slices.IndexFunc(commands, func(cmd Command) bool {
 		return cmd.Name == name
 	})
@@ -263,7 +258,7 @@ func runCommand(name string, args []string) {
 		os.Exit(1)
 	}
 
-	if err := commands[cmdIdx].Run(args); err != nil {
+	if err := commands[cmdIdx].Run(args, dir); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s", err.Error())
 		os.Exit(1)
 	}
