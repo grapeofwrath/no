@@ -4,6 +4,6 @@
     </picture>
 </h2>
 
-# NO - a NixOS and Home Manager CLI helper
+_<p align="center">a NixOS and Home Manager CLI helper written in Go</p>_
 
-_written in go_
+---
