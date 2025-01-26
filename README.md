@@ -33,3 +33,30 @@ Flags:
 
 Run `no <command> -h` to get help for a specific command
 ```
+
+## Installation
+
+1. Add this flake to your inputs.
+
+2. Add the package to your system or user packages list.
+
+3. Profit.
+
+```nix
+# flake.nix
+
+{
+  inputs.no = {
+    url = "github:grapeofwrath/no";
+    inputs.nixpkgs.follows = "nixpkgs";
+  };
+
+  ...
+}
+
+# configuration.nix
+
+{ inputs, system, ... }: {
+  environment.systemPackages = [ inputs.no.packages.${system}.default ];
+}
+```
