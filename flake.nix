@@ -28,6 +28,8 @@
 
         src = ./.;
 
+        vendorHash = null;
+
         meta = {
           description = "A NixOS and Home Manager CLI helper, written in Go";
           homepage = "https:github.com/grapeofwrath/no";
