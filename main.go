@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/user"
 	"slices"
 )
 
@@ -19,6 +20,7 @@ type Command struct {
 
 var commands = []Command{
 	{Name: "garbage", Help: "Run garbage collection and remove old generations", Run: garbageCmd},
+	{Name: "home", Help: "Rebuild a Home Manager configuration", Run: homeCmd},
 	{Name: "rebuild", Help: "Rebuild a NixOS configuration", Run: rebuildCmd},
 	{Name: "update", Help: "Update a flake.lock file", Run: updateCmd},
 	{Name: "help", Help: "Print this help", Run: printHelpCmd},
@@ -39,7 +41,8 @@ Usage:
     no garbage [flags]
 
 Flags:
-    -h, --help  Print this help.`)
+    -h, --help
+        Print this help.`)
 		fmt.Fprintln(os.Stderr)
 	}
 	flagSet.Parse(args)
@@ -56,12 +59,66 @@ Flags:
 		log.Fatal(err)
 	}
 
-	profileCmd := exec.Command("sudo", "nix", "profile", "wipe-history", "--profile", "/nix/var/nix/profiles/system", "--older-than", "7d")
+	profileCmd := exec.Command(
+		"sudo",
+		"nix",
+		"profile",
+		"wipe-history",
+		"--profile",
+		"/nix/var/nix/profiles/system",
+		"--older-than",
+		"7d")
 
 	profileCmd.Stdout = os.Stdout
 	profileCmd.Stderr = os.Stdout
 
 	err = profileCmd.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return nil
+}
+
+func homeCmd(args []string, dir string) error {
+	user, err := user.Current()
+	if err != nil {
+		log.Fatal(err)
+	}
+	hostName, err := os.Hostname()
+	if err != nil {
+		log.Fatal(err)
+	}
+	profile := user.Username + "@" + hostName
+
+	flagSet := flag.NewFlagSet("home", flag.ExitOnError)
+	flagSet.StringVar(&profile, "profile", profile, "home-manager profile")
+	flagSet.StringVar(&profile, "p", profile, "home-manager profile")
+	flagSet.Usage = func() {
+		fmt.Fprintln(os.Stderr, `Rebuild a Home Manager configuration.
+
+Usage:
+    no home [flags]
+
+Flags:
+    -p, --profile  STRING
+        Home Manager profile to use. (default 'user@host')
+    -h, --help
+        Print this help.`)
+		fmt.Fprintln(os.Stderr)
+	}
+	flagSet.Parse(args)
+
+	err = os.Chdir(dir)
+
+	fmt.Println("Rebuilding Home Manager for " + profile + "...")
+
+	cmd := exec.Command("home-manager", "switch", "--flake", ".#"+profile)
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stdout
+
+	err = cmd.Run()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -116,15 +173,18 @@ Usage:
     no rebuild [flags]
 
 Flags:
-    -a, --activate   STRING  Set how the rebuild will be activated. (default 'switch')
-    -c, --config     STRING  Specify which nixos configuration. (default 'hostname')
-    -h, --help               Print this help.`)
+    -a, --activate  STRING
+        Set how the rebuild will be activated. (default 'switch')
+    -c, --config  STRING
+        Specify which nixos configuration. (default 'hostname')
+    -h, --help
+        Print this help.`)
 		fmt.Fprintln(os.Stderr)
 	}
 	flagSet.Parse(args)
 
 	err = os.Chdir(dir)
-	fmt.Println("Rebuilding NixOS...")
+	fmt.Println("Rebuilding NixOS for " + hostName + "...")
 
 	// Not sure if I want the log file, I like the default output better than piped
 	// logFile, err := os.Create(path.Join(dir, "nixos-rebuild.log"))
@@ -170,8 +230,10 @@ Usage:
     no update [flags]
 
 Flags:
-    -s, --switch     BOOL  Rebuild system config and activate on boot. (default 'false')
-    -h, --help             Print this help.`)
+    -s, --switch  BOOL
+        Rebuild system config and activate on boot. (default 'false')
+    -h, --help
+        Print this help.`)
 		fmt.Fprintln(os.Stderr)
 	}
 	flagSet.Parse(args)
@@ -192,7 +254,12 @@ Flags:
 	if switchBool == true {
 		fmt.Println("Rebuilding NixOS...")
 
-		switchCmd := exec.Command("sudo", "nixos-rebuild", "boot", "--flake", ".#"+hostName)
+		switchCmd := exec.Command(
+			"sudo",
+			"nixos-rebuild",
+			"boot",
+			"--flake",
+			".#"+hostName)
 
 		switchCmd.Stdout = os.Stdout
 		switchCmd.Stderr = os.Stdout
@@ -220,8 +287,10 @@ Usage:
 
 	fmt.Fprintln(os.Stderr, `
 Flags:
-    -d, --directory  PATH  Run in this directory, must be full path. (default '.')
-    -h, --help             Print this help.`)
+    -d, --directory  PATH
+        Run in this directory, must be full path. (default '.')
+    -h, --help
+        Print this help.`)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Run `no <command> -h` to get help for a specific command")

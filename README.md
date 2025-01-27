@@ -60,3 +60,7 @@ Run `no <command> -h` to get help for a specific command
   environment.systemPackages = [ inputs.no.packages.${system}.default ];
 }
 ```
+
+## TODO
+
+- create NixOS module with options for defaults such as config location
