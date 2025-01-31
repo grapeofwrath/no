@@ -2,15 +2,17 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"os/user"
 	"slices"
+
+	"github.com/charmbracelet/log"
 )
 
 var err error
+
+var logger = log.New(os.Stderr)
 
 type Command struct {
 	Name string
@@ -32,49 +34,82 @@ func printHelpCmd(_ []string, _ string) error {
 }
 
 func garbageCmd(args []string, _ string) error {
+	var burn bool
 
 	flagSet := flag.NewFlagSet("garbage", flag.ExitOnError)
+	flagSet.BoolVar(&burn, "burn", false, "Remove all old configurations")
+	flagSet.BoolVar(&burn, "b", false, "Remove all old configurations")
 	flagSet.Usage = func() {
-		fmt.Fprintln(os.Stderr, `Run garbage collection and remove old generations.
+		logger.Print(`Run garbage collection and remove old generations.
 
 Usage:
     no garbage [flags]
 
 Flags:
+    -b, --burn  BOOL
+        Removes all previous system configurations from boot
     -h, --help
         Print this help.`)
-		fmt.Fprintln(os.Stderr)
 	}
 	flagSet.Parse(args)
 
-	fmt.Println("Starting system cleanup...")
+	logger.Info("Starting system cleanup...")
 
-	trashCmd := exec.Command("nix-collect-garbage", "-d")
+	sysTrashCmd := exec.Command("sudo", "nix-collect-garbage", "-d")
 
-	trashCmd.Stdout = os.Stdout
-	trashCmd.Stderr = os.Stdout
+	sysTrashCmd.Stdout = os.Stdout
+	sysTrashCmd.Stderr = os.Stdout
 
-	err = trashCmd.Run()
+	err = sysTrashCmd.Run()
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
-	profileCmd := exec.Command(
-		"sudo",
-		"nix",
-		"profile",
-		"wipe-history",
-		"--profile",
-		"/nix/var/nix/profiles/system",
-		"--older-than",
-		"7d")
+	userTrashCmd := exec.Command("nix-collect-garbage", "-d")
 
-	profileCmd.Stdout = os.Stdout
-	profileCmd.Stderr = os.Stdout
+	userTrashCmd.Stdout = os.Stdout
+	userTrashCmd.Stderr = os.Stdout
 
-	err = profileCmd.Run()
+	err = userTrashCmd.Run()
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
+	}
+
+	switch burn {
+	case false:
+		profileCmd := exec.Command(
+			"sudo",
+			"nix",
+			"profile",
+			"wipe-history",
+			"--profile",
+			"/nix/var/nix/profiles/system",
+			"--older-than",
+			"7d")
+
+		profileCmd.Stdout = os.Stdout
+		profileCmd.Stderr = os.Stdout
+
+		err = profileCmd.Run()
+		if err != nil {
+			logger.Fatal(err)
+		}
+
+	case true:
+		logger.Warn("BURN ORDER ACTIVATED")
+		logger.Print("removing all previous system configurations from boot...")
+		profileBurnCmd := exec.Command(
+			"sudo",
+			"/run/current-system/bin/switch-to-configuration",
+			"boot")
+
+		profileBurnCmd.Stdout = os.Stdout
+		profileBurnCmd.Stderr = os.Stderr
+
+		err = profileBurnCmd.Run()
+		if err != nil {
+			logger.Fatal(err)
+		}
 	}
 
 	return nil
@@ -83,11 +118,11 @@ Flags:
 func homeCmd(args []string, dir string) error {
 	user, err := user.Current()
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 	hostName, err := os.Hostname()
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 	profile := user.Username + "@" + hostName
 
@@ -95,7 +130,7 @@ func homeCmd(args []string, dir string) error {
 	flagSet.StringVar(&profile, "profile", profile, "home-manager profile")
 	flagSet.StringVar(&profile, "p", profile, "home-manager profile")
 	flagSet.Usage = func() {
-		fmt.Fprintln(os.Stderr, `Rebuild a Home Manager configuration.
+		logger.Print(`Rebuild a Home Manager configuration.
 
 Usage:
     no home [flags]
@@ -105,13 +140,12 @@ Flags:
         Home Manager profile to use. (default 'user@host')
     -h, --help
         Print this help.`)
-		fmt.Fprintln(os.Stderr)
 	}
 	flagSet.Parse(args)
 
 	err = os.Chdir(dir)
 
-	fmt.Println("Rebuilding Home Manager for " + profile + "...")
+	logger.Info("Rebuilding Home Manager for " + profile + "...")
 
 	cmd := exec.Command("home-manager", "switch", "--flake", ".#"+profile)
 
@@ -120,7 +154,7 @@ Flags:
 
 	err = cmd.Run()
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	return nil
@@ -131,7 +165,7 @@ func rebuildCmd(args []string, dir string) error {
 
 	hostName, err := os.Hostname()
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	flagSet := flag.NewFlagSet("rebuild", flag.ExitOnError)
@@ -146,7 +180,7 @@ func rebuildCmd(args []string, dir string) error {
 				return nil
 			}
 		}
-		fmt.Fprintf(os.Stderr, `must be one of: "boot", "dry-activate", "switch"\n\n`)
+		logger.Error(`must be one of: "boot", "dry-activate", "switch"\n\n`)
 		flagSet.Usage()
 		os.Exit(1)
 
@@ -159,7 +193,7 @@ func rebuildCmd(args []string, dir string) error {
 				return nil
 			}
 		}
-		fmt.Fprintf(os.Stderr, `must be one of: "boot", "dry-activate", "switch"\n\n`)
+		logger.Error(`must be one of: "boot", "dry-activate", "switch"\n\n`)
 		flagSet.Usage()
 		os.Exit(1)
 
@@ -167,7 +201,7 @@ func rebuildCmd(args []string, dir string) error {
 	})
 
 	flagSet.Usage = func() {
-		fmt.Fprintln(os.Stderr, `Rebuild a NixOS configuration.
+		logger.Print(`Rebuild a NixOS configuration.
 
 Usage:
     no rebuild [flags]
@@ -179,12 +213,11 @@ Flags:
         Specify which nixos configuration. (default 'hostname')
     -h, --help
         Print this help.`)
-		fmt.Fprintln(os.Stderr)
 	}
 	flagSet.Parse(args)
 
 	err = os.Chdir(dir)
-	fmt.Println("Rebuilding NixOS for " + hostName + "...")
+	logger.Info("Rebuilding NixOS for " + hostName + "...")
 
 	// Not sure if I want the log file, I like the default output better than piped
 	// logFile, err := os.Create(path.Join(dir, "nixos-rebuild.log"))
@@ -204,7 +237,7 @@ Flags:
 
 	err = cmd.Run()
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	return nil
@@ -215,7 +248,7 @@ func updateCmd(args []string, dir string) error {
 
 	hostName, err := os.Hostname()
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	flagSet := flag.NewFlagSet("rebuild", flag.ExitOnError)
@@ -224,7 +257,7 @@ func updateCmd(args []string, dir string) error {
 	flagSet.BoolVar(&switchBool, "s", false, "switch after update")
 
 	flagSet.Usage = func() {
-		fmt.Fprintln(os.Stderr, `Update a 'flake.lock' file.
+		logger.Print(`Update a 'flake.lock' file.
 
 Usage:
     no update [flags]
@@ -234,12 +267,11 @@ Flags:
         Rebuild system config and activate on boot. (default 'false')
     -h, --help
         Print this help.`)
-		fmt.Fprintln(os.Stderr)
 	}
 	flagSet.Parse(args)
 
 	err = os.Chdir(dir)
-	fmt.Printf("Updating flake in %s...\n", dir)
+	logger.Info("Updating flake in %s...\n", dir)
 
 	updateCmd := exec.Command("sudo", "nix", "flake", "update")
 
@@ -248,11 +280,11 @@ Flags:
 
 	err = updateCmd.Run()
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	if switchBool == true {
-		fmt.Println("Rebuilding NixOS...")
+		logger.Info("Rebuilding NixOS...")
 
 		switchCmd := exec.Command(
 			"sudo",
@@ -266,7 +298,7 @@ Flags:
 
 		err = switchCmd.Run()
 		if err != nil {
-			log.Fatal(err)
+			logger.Fatal(err)
 		}
 	}
 
@@ -278,22 +310,20 @@ func usage() {
 
 Usage:
     no [flags] <command> [command flags]`
-	fmt.Fprintln(os.Stderr, intro)
+	logger.Print(intro)
 
-	fmt.Fprintln(os.Stderr, "\nCommands:")
+	logger.Print("\nCommands:")
 	for _, cmd := range commands {
-		fmt.Fprintf(os.Stderr, "    %-8s %s\n", cmd.Name, cmd.Help)
+		logger.Printf("    %-8s %s\n", cmd.Name, cmd.Help)
 	}
 
-	fmt.Fprintln(os.Stderr, `
-Flags:
+	logger.Print(`Flags:
     -d, --directory  PATH
         Run in this directory, must be full path. (default '.')
     -h, --help
         Print this help.`)
 
-	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, "Run `no <command> -h` to get help for a specific command")
+	logger.Print("\nRun `no <command> -h` to get help for a specific command")
 }
 
 func main() {
@@ -322,13 +352,13 @@ func runCommand(name string, args []string, dir string) {
 	})
 
 	if cmdIdx < 0 {
-		fmt.Fprintf(os.Stderr, "command \"%s\" not found\n\n", name)
+		logger.Errorf("command \"%s\" not found\n\n", name)
 		flag.Usage()
 		os.Exit(1)
 	}
 
 	if err := commands[cmdIdx].Run(args, dir); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %s", err.Error())
+		logger.Errorf("Error: %s", err.Error())
 		os.Exit(1)
 	}
 }
