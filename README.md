@@ -12,8 +12,6 @@ This is what could be as simple as command aliases in my shell that I have
 decided to wrap up in a go module. Is this necessary? I think the name speaks
 for itself. However, it does tickle my fancy.
 
-## no usage
-
 ```shell
 $ no --help
 no is a NixOS and Home Manager CLI helper written in Go.
@@ -23,13 +21,16 @@ Usage:
 
 Commands:
     garbage  Run garbage collection and remove old generations
+    home     Rebuild a Home Manager configuration
     rebuild  Rebuild a NixOS configuration
     update   Update a flake.lock file
     help     Print this help
 
 Flags:
-    -d, --directory  PATH  Run in this directory, must be full path. (default '.')
-    -h, --help             Print this help.
+    -d, --directory  PATH
+        Run in this directory, must be full path. (default '.')
+    -h, --help
+        Print this help.
 
 Run `no <command> -h` to get help for a specific command
 ```
@@ -66,7 +67,3 @@ nix run github:grapeofwrath/no
   environment.systemPackages = [ inputs.no.packages.${system}.default ];
 }
 ```
-
-## no todo
-
-- create NixOS module with options for defaults such as config location

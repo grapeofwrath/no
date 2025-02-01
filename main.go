@@ -271,7 +271,7 @@ Flags:
 	flagSet.Parse(args)
 
 	err = os.Chdir(dir)
-	logger.Info("Updating flake in %s...\n", dir)
+	logger.Infof("Updating flake in %s...\n", dir)
 
 	updateCmd := exec.Command("sudo", "nix", "flake", "update")
 
