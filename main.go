@@ -97,7 +97,7 @@ Flags:
 
 	case true:
 		logger.Warn("BURN ORDER ACTIVATED")
-		logger.Print("removing all previous system configurations from boot...")
+		logger.Print("purging all previous system configurations from boot...")
 		profileBurnCmd := exec.Command(
 			"sudo",
 			"/run/current-system/bin/switch-to-configuration",
@@ -314,10 +314,11 @@ Usage:
 
 	logger.Print("\nCommands:")
 	for _, cmd := range commands {
-		logger.Printf("    %-8s %s\n", cmd.Name, cmd.Help)
+		logger.Printf("    %-8s %s", cmd.Name, cmd.Help)
 	}
 
-	logger.Print(`Flags:
+	logger.Print(`
+Flags:
     -d, --directory  PATH
         Run in this directory, must be full path. (default '.')
     -h, --help

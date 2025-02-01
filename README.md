@@ -12,7 +12,7 @@ This is what could be as simple as command aliases in my shell that I have
 decided to wrap up in a go module. Is this necessary? I think the name speaks
 for itself. However, it does tickle my fancy.
 
-## Usage
+## no usage
 
 ```shell
 $ no --help
@@ -34,7 +34,13 @@ Flags:
 Run `no <command> -h` to get help for a specific command
 ```
 
-## Installation
+## no demo
+
+```sh
+nix run github:grapeofwrath/no
+```
+
+## no install
 
 1. Add this flake to your inputs.
 
@@ -61,6 +67,6 @@ Run `no <command> -h` to get help for a specific command
 }
 ```
 
-## TODO
+## no todo
 
 - create NixOS module with options for defaults such as config location
