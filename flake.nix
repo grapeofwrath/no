@@ -24,7 +24,7 @@
     packages = forAllSystems ({pkgs}: {
       default = pkgs.buildGoModule rec {
         pname = "no";
-        version = "0.2.0";
+        version = "0.3.0";
 
         src = ./.;
 

@@ -10,7 +10,8 @@ _<p align="center">a NixOS and Home Manager CLI helper, written in Go</p>_
 
 This is what could be as simple as command aliases in my shell that I have
 decided to wrap up in a go module. Is this necessary? I think the name speaks
-for itself. However, it does tickle my fancy.
+for itself. However, it does tickle my fancy. This is currently built for flakes
+only.
 
 ```shell
 $ no --help
