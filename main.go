@@ -424,7 +424,7 @@ Examples:
 		"nix",
 		"flake",
 		"update")
-	if len(inputs) != 0 {
+	if inputs != "" {
 		updateCmd = exec.Command(
 			"sudo",
 			"nix",
