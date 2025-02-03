@@ -18,20 +18,34 @@ $ no --help
 no is a NixOS and Home Manager CLI helper written in Go.
 
 Usage:
+
     no [flags] <command> [command flags]
 
 Commands:
+
     garbage  Run garbage collection and remove old generations
+
     home     Rebuild a Home Manager configuration
+
     rebuild  Rebuild a NixOS configuration
+
     update   Update a flake.lock file
+
     help     Print this help
 
+
 Flags:
+
     -d, --directory  PATH
         Run in this directory, must be full path. (default '.')
+
     -h, --help
         Print this help.
+
+Examples:
+
+    Rebuild the current NixOS configuration in the specified directory
+        no -d /home/user/dotfiles rebuild
 
 Run `no <command> -h` to get help for a specific command
 ```

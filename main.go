@@ -161,7 +161,7 @@ func homeCmd(args []string) error {
 	for _, op := range operations {
 		opsHelp = append(opsHelp, op.Name+"\n        "+op.Help)
 	}
-	var opsHelpMsg = strings.Join(opsHelp, "\n    ")
+	var opsHelpMsg = strings.Join(opsHelp, "\n\n    ")
 
 	user, err := user.Current()
 	if err != nil {
@@ -184,7 +184,7 @@ func homeCmd(args []string) error {
 				return nil
 			}
 		}
-		logger.Errorf("operation must be one of:\n    %s\n", opsHelpMsg)
+		logger.Errorf("operation must be one of:\n\n    %s\n", opsHelpMsg)
 		flagSet.Usage()
 		os.Exit(1)
 
@@ -197,7 +197,7 @@ func homeCmd(args []string) error {
 				return nil
 			}
 		}
-		logger.Errorf("operation must be one of:\n    %s\n", opsHelpMsg)
+		logger.Errorf("operation must be one of:\n\n    %s\n", opsHelpMsg)
 		flagSet.Usage()
 		os.Exit(1)
 
@@ -282,7 +282,7 @@ func rebuildCmd(args []string) error {
 	for _, op := range operations {
 		opsHelp = append(opsHelp, op.Name+"\n        "+op.Help)
 	}
-	var opsHelpMsg = strings.Join(opsHelp, "\n    ")
+	var opsHelpMsg = strings.Join(opsHelp, "\n\n    ")
 
 	var hostName, err = os.Hostname()
 	if err != nil {
@@ -301,7 +301,7 @@ func rebuildCmd(args []string) error {
 				return nil
 			}
 		}
-		logger.Errorf("operation must be one of:\n    %s\n", opsHelpMsg)
+		logger.Errorf("operation must be one of:\n\n    %s\n", opsHelpMsg)
 		flagSet.Usage()
 		os.Exit(1)
 
@@ -314,7 +314,7 @@ func rebuildCmd(args []string) error {
 				return nil
 			}
 		}
-		logger.Errorf("operation must be one of:\n    %s\n", opsHelpMsg)
+		logger.Errorf("operation must be one of:\n\n    %s\n", opsHelpMsg)
 		flagSet.Usage()
 		os.Exit(1)
 
